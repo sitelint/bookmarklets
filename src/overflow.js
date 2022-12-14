@@ -6,7 +6,7 @@ const isParentSkippable = (element) => {
 
   while (parent !== null) {
     let rect = parent.getBoundingClientRect();
-    let overflowX = window.getComputedStyle(element).getPropertyValue('overflow-x');
+    let overflowX = window.getComputedStyle(parent).getPropertyValue('overflow-x');
 
     if (overflowX === 'hidden' || (rect.width < 2 && rect.height < 2)) {
       return true;
