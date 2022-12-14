@@ -1,39 +1,65 @@
-const allElements = Array.from(document.getElementsByTagName("*"));
 const docWidth = document.documentElement.offsetWidth;
+const tooWideElements = [];
+const body = document.body;
+const root = document.documentElement;
+const pageHeight = Math.max(body.scrollHeight, body.offsetHeight, root.clientHeight, root.scrollHeight, root.offsetHeight);
+const pageWidth = Math.max(body.scrollWidth, body.offsetWidth, root.clientWidth, root.scrollWidth, root.offsetWidth);
 
-const isParentSkippable = (element) => {
-  let parent = element;
+const pageSize = {
+  height: pageHeight,
+  width: pageWidth
+};
 
-  while (parent !== null) {
-    let rect = parent.getBoundingClientRect();
-    let overflowX = window.getComputedStyle(parent).getPropertyValue('overflow-x');
+const isAnyPartOfElementRenderedOnPage = (element) => {
+  const rect = element.getBoundingClientRect();
 
-    if (overflowX === 'hidden' || (rect.width < 2 && rect.height < 2)) {
-      return true;
-    }
-
-    parent = parent.parentElement;
+  if (rect.height === 0 && rect.width === 0) {
+    return false;
   }
 
-  return false;
-};
+  const verticalInView = (rect.top <= pageSize.height) && ((rect.top + rect.height) >= 0);
+  const horizontalInView = (rect.left <= pageSize.width) && ((rect.left + rect.width) >= 0);
 
-const tooWideElements = [];
-
-const isWithinTooWideParent = (element) => {
-  return tooWideElements.find((el) => {
-    return el.contains(element);
-  });
-};
-
-for (const element of allElements) {
-    let rect = element.getBoundingClientRect();
-    if ((rect.width > 1 && rect.height > 1) && (rect.right > docWidth || rect.left < 0 && isParentSkippable(element) === false) && isWithinTooWideParent(element) === undefined) {
-        tooWideElements.push(element);
-        element.style.setProperty('border-top', '4px solid #c30', 'important');
-    }
+  return (verticalInView && horizontalInView);
 }
 
+const traverse = (_childNodes) => {
+  const elements = Array.from(_childNodes);
+
+  for (const element of elements) {
+    if (element.nodeType !== 1) {
+      continue;
+    }
+
+    let rect = element.getBoundingClientRect()
+    let overflowX = window
+      .getComputedStyle(element)
+      .getPropertyValue('overflow-x')
+  
+    if (overflowX === 'hidden' || (rect.width < 2 && rect.height < 2) || isAnyPartOfElementRenderedOnPage(element) === false) {
+      continue;
+    }
+
+    if (rect.right > docWidth || rect.left < 0) {
+      tooWideElements.push(element);
+
+      continue;
+    }
+    
+    if (element.childNodes.length > 0) {
+      traverse(element.childNodes);
+    }
+  }
+};
+
+traverse(body.childNodes);
+
+const markAsTooWide = (element) => {
+  element.style.setProperty('border-top', '4px solid #c30', 'important');
+};
+
+tooWideElements.forEach(markAsTooWide);
+
 if (tooWideElements.length > 0) {
-  console.log('Elements too wide', tooWideElements);
+  console.log('[tooWideElements]', tooWideElements);
 }
